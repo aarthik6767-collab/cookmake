@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CookMate - AI Cooking Helper</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #fff7ed, #ffedd5);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .app {
+            width: min(760px, 94%);
+            height: 680px;
+            background: white;
+            border-radius: 22px;
+            box-shadow: 0 15px 45px rgba(0,0,0,.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        header {
+            padding: 22px;
+            background: #f97316;
+            color: white;
+        }
+        header h1 { margin: 0; font-size: 25px; }
+        header p { margin: 5px 0 0; opacity: .9; }
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .welcome {
+            text-align: center;
+            margin-top: 100px;
+            color: #555;
+        }
+        .welcome .emoji { font-size: 55px; }
+        .msg {
+            margin: 12px 0;
+            display: flex;
+        }
+        .msg.user { justify-content: flex-end; }
+        .bubble {
+            max-width: 78%;
+            padding: 12px 15px;
+            border-radius: 16px;
+            white-space: pre-wrap;
+            line-height: 1.45;
+        }
+        .user .bubble {
+            background: #f97316;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .bot .bubble {
+            background: #f3f4f6;
+            color: #222;
+            border-bottom-left-radius: 4px;
+        }
+        .suggestions {
+            display: flex;
+            gap: 8px;
+            padding: 0 18px 12px;
+            flex-wrap: wrap;
+        }
+        .suggestions button {
+            border: 1px solid #fed7aa;
+            background: #fff7ed;
+            color: #c2410c;
+            border-radius: 20px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .composer {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 1px solid #eee;
+        }
+        input {
+            flex: 1;
+            padding: 13px 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            outline: none;
+            font-size: 15px;
+        }
+        input:focus { border-color: #f97316; }
+        .send {
+            border: 0;
+            background: #f97316;
+            color: white;
+            padding: 0 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .send:disabled { opacity: .5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <h1>🍳 CookMate</h1>
+        <p>Your AI Cooking Helper</p>
+    </header>
+
+    <div id="chat">
+        <div class="welcome" id="welcome">
+            <div class="emoji">👨‍🍳</div>
+            <h2>What can I cook today?</h2>
+            <p>Tell me your ingredients or ask for a recipe.</p>
+        </div>
+    </div>
+
+    <div class="suggestions">
+        <button onclick="quickAsk('I have rice and egg. What can I cook?')">🍚 Rice + Egg</button>
+        <button onclick="quickAsk('Give me a quick breakfast recipe')">🥞 Quick Breakfast</button>
+        <button onclick="quickAsk('How can I make tomato soup?')">🍅 Tomato Soup</button>
+    </div>
+
+    <div class="composer">
+        <input id="message" placeholder="Example: I have tomato, onion and egg..." />
+        <button class="send" id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+    </div>
+</div>
+
+<script>
+const input = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
+const chat = document.getElementById("chat");
+const welcome = document.getElementById("welcome");
+
+input.addEventListener("input", () => {
+    sendBtn.disabled = !input.value.trim();
+});
+
+input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !sendBtn.disabled) sendMessage();
+});
+
+function addMessage(text, type) {
+    if (welcome) welcome.style.display = "none";
+    const row = document.createElement("div");
+    row.className = "msg " + type;
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function quickAsk(text) {
+    input.value = text;
+    sendBtn.disabled = false;
+    sendMessage();
+}
+
+async function sendMessage() {
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMessage(message, "user");
+    input.value = "";
+    sendBtn.disabled = true;
+
+    addMessage("Cooking up an answer... 👨‍🍳", "bot");
+    const loading = chat.lastElementChild;
+
+    try {
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message})
+        });
+        const data = await response.json();
+        loading.querySelector(".bubble").textContent = data.reply;
+    } catch (error) {
+        loading.querySelector(".bubble").textContent =
+            "Unable to connect to the server. Please check that Flask is running.";
+    }
+}
+</script>
+</body>
+</html>
